@@ -3,31 +3,24 @@ import cv2
 #poster: write down important details ex. calibration image
 
 
-def binary_search(cap, low, high, miny, lowestFrame, ballSeen, numPasses): 
+def binary_search(arr, low, high, miny, lowestFrame, ballSeen, numPasses): 
     # Check base case 
     if(numPasses == 2):
       return lowestFrame
 
     if high >= low: 
         mid = (high + low) // 2
+        arr[mid] = arr[mid][0 + int((arr[mid].shape[0] * .25)): arr[mid].shape[0], 0:arr[mid].shape[1]]
+        opening_ball, contours_ball = getMask(arr[mid], np.array([25, 75, 85]), np.array([50, 220,255]))
 
-        cap.set(1, mid)
-        ret, cur_frame = cap.read()
-
-        cur_frame = cur_frame[0 + int((cur_frame.shape[0] * .25)): cur_frame.shape[0], 0:cur_frame.shape[1]]
-        opening_ball, contours_ball = getMask(cur_frame, np.array([25, 75, 85]), np.array([50, 220,255]))
-
-        if(ballSeen and len(contours_ball) == 0): return binary_search(cap, low, mid-1, miny, lowestFrame, ballSeen, numPasses)
+        if(ballSeen and len(contours_ball) == 0): return binary_search(arr, low, mid-1, miny, lowestFrame, ballSeen, numPasses)
         #elif(not(ballSeen) and len(contours_ball) == 0): return binary_search(arr, mid+1, high, miny, lowestFrame, ballSeen, numPasses)
         
         
         while len(contours_ball) == 0:
-          mid = mid + 30
-          cap.set(1, mid)
-          ret, cur_frame = cap.read()
-          cur_frame = cur_frame[0 + int((cur_frame.shape[0] * .25)): cur_frame.shape[0], 0:cur_frame.shape[1]]
-          opening_ball, contours_ball, = getMask(cur_frame, np.array([25, 75, 85]), np.array([50, 220,255]))
-
+          mid = mid + 1
+          arr[mid] = arr[mid][0 + int((arr[mid].shape[0] * .25)): arr[mid].shape[0], 0:arr[mid].shape[1]]
+          opening_ball, contours_ball, = getMask(arr[mid], np.array([25, 75, 85]), np.array([50, 220,255]))
           #if(len(contours_ball) != 0): cv2.imwrite("middle.jpg", arr[mid])
         
 
@@ -41,14 +34,10 @@ def binary_search(cap, low, high, miny, lowestFrame, ballSeen, numPasses):
         
         lowest1 = lowest[0][1]
 
-        cap.set(1, mid + 5)
-        ret, ahead_frame = cap.read()
+        arr[mid + 5] = arr[mid + 5][0 + int((arr[mid + 5].shape[0] * .25)): arr[mid + 5].shape[0], 0:arr[mid + 5].shape[1]]
+        opening_ball, contours_ball = getMask(arr[mid + 5], np.array([25, 75, 85]), np.array([50, 220,255]))
 
-        ahead_frame = ahead_frame[0 + int((ahead_frame.shape[0] * .25)): ahead_frame.shape[0], 0:ahead_frame.shape[1]]
-        opening_ball, contours_ball = getMask(ahead_frame, np.array([25, 75, 85]), np.array([50, 220,255]))
-
-        if(len(contours_ball) == 0): return binary_search(cap, low, mid-1, miny, lowestFrame, ballSeen, numPasses)
-        #5 pixels ahead, the ball isnt present anymore
+        #5 pixels ahead, the ball isnt present anymo
         lowest = contours_ball[0][0]
         for i in contours_ball[0]:
             if(i[0][1] > lowest[0][1]):
@@ -58,16 +47,16 @@ def binary_search(cap, low, high, miny, lowestFrame, ballSeen, numPasses):
         lowest2 = lowest[0][1]
 
         if lowest1 < lowest2 and lowest1 < miny: 
-            return binary_search(cap, low, mid - 1, miny, lowestFrame, ballSeen, numPasses + 1) 
+            return binary_search(arr, low, mid - 1, miny, lowestFrame, ballSeen, numPasses + 1) 
 
         elif lowest1 < lowest2 and lowest1 > miny: 
-            return binary_search(cap, mid + 1, high, lowest1, cur_frame,ballSeen, 0) 
+            return binary_search(arr, mid + 1, high, lowest1, arr[mid],ballSeen, 0) 
         
         elif lowest1 > lowest2 and lowest1 > miny: 
-            return binary_search(cap, low, mid - 1, lowest1, cur_frame, ballSeen, 0) 
+            return binary_search(arr, low, mid - 1, lowest1, arr[mid], ballSeen, 0) 
         
         elif lowest1 > lowest2 and lowest1 < miny: 
-            return binary_search(cap, low, mid - 1,  miny, lowestFrame, ballSeen, numPasses + 1) 
+            return binary_search(arr, low, mid - 1,  miny, lowestFrame, ballSeen, numPasses + 1) 
         
     else: 
         return lowestFrame
@@ -77,6 +66,7 @@ def getMask(img, lower, upper):
   img_mask = cv2.inRange(img_hsv, lower, upper)
   kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
   opening = cv2.morphologyEx(img_mask, cv2.MORPH_OPEN, kernel, iterations=3)
+
   contours, hierarchy = cv2.findContours(opening.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
 
   return [opening, contours]
@@ -127,23 +117,26 @@ def inOrOut(line, ball):
   #write in or out on the image
   cv2.imwrite("result.jpg", ball)
   contour_img = cv2.imread("result.jpg")
-  contour_img = cv2.drawContours(contour_img, contours_line, 0, (0,255,0), 5)
-  contour_img = cv2.drawContours(contour_img, contours_ball, -1, (0,255,0), 5)
+  contour_img = cv2.drawContours(contour_img, contours_line, 0, (0,255,0), 1)
+  contour_img = cv2.drawContours(contour_img, contours_ball, -1, (0,255,0), 1)
   font = cv2.FONT_HERSHEY_SIMPLEX
   if(ball_in): cv2.putText(contour_img, 'IN', (10, contour_img.shape[1]//2), font, 10, (0, 0, 255), 8, cv2.LINE_AA)
   else: cv2.putText(contour_img, 'OUT', (10, contour_img.shape[1]//2), font, 10, (0, 0, 255), 8, cv2.LINE_AA)
   cv2.imwrite("result.jpg", contour_img)
 
+
 #driving code
 #read the frames of the video into an array
-cap = cv2.VideoCapture('court/vid.mp4') #input the path of the video you want to make a line call on
+cap = cv2.VideoCapture('vid.mp4') 
 ret, first = cap.read()
-total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-
+frames = []
+while (cap.isOpened()): 
+  ret, frame = cap.read()
+  frames.append(frame)
+  if(not(ret)): break
 
 #binary search to find the frame where the ball is at its lowest point
-smallest_frame = binary_search(cap, 0, total_frames - 2, 0, first, False, 0)
+smallest_frame = binary_search(frames, 0, len(frames) - 2, 0, frames[0], False, 0)
 
-cv2.imwrite("smallest.jpg", smallest_frame)
 #make the call on the lowest frame
 inOrOut(first, smallest_frame)
