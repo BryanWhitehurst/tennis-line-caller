@@ -127,7 +127,7 @@ def inOrOut(line, ball):
 
 t0 = time()
 #driving code
-cap = cv2.VideoCapture('court/vid.mp4') 
+cap = cv2.VideoCapture('vids/rec.mp4') 
 ret, first = cap.read()
 frames = []
 
