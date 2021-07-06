@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from time import time, strftime, localtime
+import sys
 #poster: write down important details ex. calibration image
 #For best results, it is important that the video is trimmed down to the time where the ball is in play
 
@@ -127,7 +128,7 @@ def inOrOut(line, ball):
 
 t0 = time()
 #driving code
-cap = cv2.VideoCapture('vids/rec.mp4') 
+cap = cv2.VideoCapture(str(sys.argv[1])) 
 ret, first = cap.read()
 frames = []
 
